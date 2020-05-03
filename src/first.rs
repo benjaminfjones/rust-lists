@@ -5,8 +5,13 @@ use std::mem;
 
 //////////////////////////////////////////////////////////////////////////////
 // Types
+//
+// Linked list layout:
+// [] = stack
+// () = heap
+// [ptr] -> (elem A, ptr) -> (elem B, ptr) -> (elem C, *null*)
 
-// A newtype around Link
+// A newtype around Link to hide implementation details of `Node`
 pub struct List {
     head: Link,
 }
