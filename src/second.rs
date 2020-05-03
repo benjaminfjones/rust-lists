@@ -1,10 +1,20 @@
 // A better singly-linked stack implementation.
 //
+// Improvements:
+//     - better API
+//     - generic over contained type
+//     - uses Option instread of custom isomorphic type
+//
 // Inspired by:
 // https://rust-unofficial.github.io/too-many-lists/second.html
 
 //////////////////////////////////////////////////////////////////////////////
 // Data structures
+//
+// Linked list layout:
+// [] = stack
+// () = heap
+// [ptr] -> (elem A, ptr) -> (elem B, ptr) -> (elem C, *null*)
 
 pub struct List<T> {
     head: Link<T>,
@@ -30,6 +40,8 @@ impl<T> List<T> {
     pub fn push(&mut self, x: T) {
         let new_box_node = Box::new(Node {
             elem: x,
+            // Option::take extracts the content and replaces it with a new None
+            // equivalent to mem::replace(&mut self.head, None)
             next: self.head.take(),
         });
         self.head = Some(new_box_node);
@@ -38,6 +50,7 @@ impl<T> List<T> {
     // pop an integer from the stack, returning either Some(value) or None if
     // the stack is empty.
     pub fn pop(&mut self) -> Option<T> {
+        // map a lambda over the content of self.head that includes self.head in its closure
         self.head.take().map(|node| {
             self.head = node.next;
             node.elem
@@ -46,7 +59,8 @@ impl<T> List<T> {
 
     // peek at the element at the head of the list
     pub fn peek(&self) -> Option<&T> {
-        // Option::as_ref :: Option<T> -> Option<&T>
+        // Option::as_ref :: &Option<N> -> Option<&N>
+        // map consumes the &N leaving the original Optional content alone
         self.head.as_ref().map(|node| &node.elem)
     }
 
@@ -74,15 +88,19 @@ impl<T> Drop for List<T> {
 //////////////////////////////////////////////////////////////////////////////
 // Iteration
 
+// struct has a single List<T> field
 pub struct IntoIter<T>(List<T>);
 
+// Provide List<T> with a method for converting to an iterator
 impl<T> List<T> {
+    // into_iter consumes `self`, returning an `IntoIter<T>`
     pub fn into_iter(self) -> IntoIter<T> {
         IntoIter(self)
     }
 }
 
 impl<T> Iterator for IntoIter<T> {
+    // type of thing being iterator through
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         self.0.pop()
@@ -108,7 +126,8 @@ impl<T> List<T> {
 impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
-    // why Self::Item instead of &T ?
+    // Why `Self::Item` instead of `&T`? Because otherwise compiler can't infer the lifetime of the
+    // thing inside the returned Option
     fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| {
             // self.next = node.next.map(|nnode| &nnode);
@@ -151,6 +170,17 @@ mod test {
 
         // test for exhaustion
         assert_eq!(list.pop(), None);
+
+        // How about for strings?
+        let mut str_list = List::new();
+        assert_eq!(list.pop(), None);
+        str_list.push("a".to_string());
+        str_list.push("b".to_string());
+        str_list.push("c".to_string());
+        assert_eq!(str_list.pop(), Some("c".to_string()));
+        assert_eq!(str_list.pop(), Some("b".to_string()));
+        assert_eq!(str_list.pop(), Some("a".to_string()));
+        assert_eq!(str_list.pop(), None);
     }
 
     #[test]
