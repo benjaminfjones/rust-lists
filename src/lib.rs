@@ -1,5 +1,6 @@
-pub mod first;
-pub mod second;
+pub mod first; // a bad stack
+pub mod second; // an Ok, generic, singly-linked stack
+pub mod third; // a persistent singly-linked stack
 
 #[cfg(test)]
 mod tests {
