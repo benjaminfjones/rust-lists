@@ -88,6 +88,9 @@ impl<T> Drop for List<T> {
 //////////////////////////////////////////////////////////////////////////////
 // Iteration
 
+//
+// IntoIter
+//
 // struct has a single List<T> field
 pub struct IntoIter<T>(List<T>);
 
@@ -107,17 +110,20 @@ impl<T> Iterator for IntoIter<T> {
     }
 }
 
+//
+// Iter
+//
 pub struct Iter<'a, T> {
     next: Option<&'a Node<T>>,
 }
 
 impl<T> List<T> {
-    // self needs to live at least as long as the iter
-    pub fn iter<'a>(&'a self) -> Iter<'a, T> {
+    // self needs to live at least as long as the iter. We elide the lifetimes.
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             // remember: map<U, F>(self, f: F) -> Option<U>
             // turbofish operator ::<> lets us (partially) spec the generic types
-            // or, more janky is to write: &**node
+            // or, more janky is to write: &**node in place of &node below
             next: self.head.as_ref().map::<&Node<T>, _>(|node| &node),
         }
     }
@@ -128,11 +134,40 @@ impl<'a, T> Iterator for Iter<'a, T> {
 
     // Why `Self::Item` instead of `&T`? Because otherwise compiler can't infer the lifetime of the
     // thing inside the returned Option
+    //
+    // Note: we don't technically need to take() `self.next` here since & is Copy.
     fn next(&mut self) -> Option<Self::Item> {
-        self.next.map(|node| {
+        self.next.take().map(|node| {
             // self.next = node.next.map(|nnode| &nnode);
             self.next = node.next.as_ref().map::<&Node<T>, _>(|node| &node);
             &node.elem
+        })
+    }
+}
+
+//
+// IterMut
+//
+pub struct IterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut {
+            next: self.head.as_mut().map(|node| &mut **node),
+        }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    // We must take() `self.next` here because &mut is not Copy.
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_mut().map(|next_node| &mut **next_node);
+            &mut node.elem
         })
     }
 }
@@ -237,5 +272,20 @@ mod test {
         assert_eq!(iter.next(), Some(&2));
         assert_eq!(iter.next(), Some(&1));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn iter_mut() {
+        let mut list = List::new();
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        let mut iter_mut = list.iter_mut();
+        // let mut iter_mut2 = list.iter_mut();  // this fails to compile!
+        assert_eq!(iter_mut.next(), Some(&mut 3));
+        assert_eq!(iter_mut.next(), Some(&mut 2));
+        assert_eq!(iter_mut.next(), Some(&mut 1));
+        assert_eq!(iter_mut.next(), None);
     }
 }
