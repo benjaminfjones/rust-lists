@@ -1,6 +1,7 @@
-pub mod fifth;
-pub mod first; // a bad stack
-pub mod second; // an Ok, generic, singly-linked stack
+pub mod fifth; // mutable queue using only boxes and &mut
+pub mod fifth_unsafe; // mutable queue using raw pointers
+pub mod first; // a naive stack
+pub mod second; // an Ok, generic stack
 pub mod third; // a persistent singly-linked stack
 
 #[cfg(test)]

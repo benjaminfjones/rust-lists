@@ -1,7 +1,7 @@
-// An unsafe queue implementation
+// A basic mutable queue implementation (that doesn't end up working)
 //
 // Features:
-//     - queue API
+//     - mutable queue API
 //     - fast push and pop
 //
 // Inspired by:
@@ -10,7 +10,8 @@
 //////////////////////////////////////////////////////////////////////////////
 // Data structures
 //
-// Linked list layout:
+// Memory layout:
+//
 // [] = stack
 // () = heap
 // [ptr] -> (A, Some(ptr)) -> (B, Some(ptr)) -> (C, None)
